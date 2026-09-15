@@ -10,6 +10,36 @@
 
 ---
 
+## 📑 Table of Contents
+
+- [📌 Overview](#-overview)
+- [🎯 Project Goals](#-project-goals)
+- [🏗️ Project Structure](#️-project-structure)
+- [🔄 Evaluation Architecture](#-evaluation-architecture)
+- [🧰 Technology Stack](#-technology-stack)
+- [📋 Prerequisites](#-prerequisites)
+- [🚀 Installation](#-installation)
+- [🔐 Environment Configuration](#-environment-configuration)
+- [🧪 Running the Tests](#-running-the-tests)
+- [📊 HTML Reports](#-html-reports)
+- [🗂️ Test Suite](#️-test-suite)
+- [🧩 Test Case Format](#-test-case-format)
+- [🎯 Metric Design](#-metric-design)
+- [🧠 Category-Aware Metric Selection](#-category-aware-metric-selection)
+- [🤖 Claude as the Evaluation Judge](#-claude-as-the-evaluation-judge)
+- [🔍 Application Under Test](#-application-under-test)
+- [📈 Understanding Scores and Thresholds](#-understanding-scores-and-thresholds)
+- [🧪 Example Evaluation Lifecycle](#-example-evaluation-lifecycle)
+- [🛠️ Extending the Evaluation Suite](#️-extending-the-evaluation-suite)
+- [🐛 Failure Analysis](#-failure-analysis)
+- [⚠️ API Usage Considerations](#️-api-usage-considerations)
+- [🔒 Security Notes](#-security-notes)
+- [📝 Development Tips](#-development-tips)
+- [📌 Current Project Summary](#-current-project-summary)
+- [📄 License](#-license)
+
+---
+
 ## 📌 Overview
 
 This repository contains a focused evaluation suite for a Claude-powered application. The project sends a curated set of prompts to Claude, wraps each response in a DeepEval `LLMTestCase`, and evaluates the response with metrics selected according to the test case category.

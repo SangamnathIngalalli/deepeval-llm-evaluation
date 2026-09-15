@@ -1,174 +1,82 @@
 # 🧪 DeepEval LLM Evaluation
 
-> **Project 2 of the AI Automation Testing Roadmap**
-
-An end-to-end evaluation suite for a Claude-powered LLM application using **DeepEval**, **pytest**, and **LLM-as-a-judge evaluation**.
-
-**25 test cases · 5 categories · 4 evaluation metrics · Claude judge · HTML reports**
+> An end-to-end LLM evaluation project that uses **DeepEval**, **pytest**, **Anthropic Claude**, and **LLM-as-a-judge** techniques to measure the quality, correctness, safety, and uncertainty handling of Claude responses.
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://www.python.org/)
-[![Pytest](https://img.shields.io/badge/Pytest-8.0%2B-green)](https://docs.pytest.org/)
-[![DeepEval](https://img.shields.io/badge/DeepEval-4.2%2B-purple)](https://docs.confident-ai.com/)
+[![Pytest](https://img.shields.io/badge/Pytest-8%2B-green)](https://docs.pytest.org/)
+[![DeepEval](https://img.shields.io/badge/DeepEval-2%2B-purple)](https://deepeval.com/)
 [![Anthropic](https://img.shields.io/badge/Anthropic-Claude-orange)](https://www.anthropic.com/)
-[![Tests](https://img.shields.io/badge/Tests-25-blue)](#-test-results)
-[![License](https://img.shields.io/badge/License-MIT-lightgrey)](./LICENSE)
+[![Test Cases](https://img.shields.io/badge/Test%20Cases-25-blue)](#test-suite)
 
 ---
 
-## 📑 Table of Contents
+## 📌 Overview
 
-* [💡 Why This Project Exists](#-why-this-project-exists)
-* [📖 Overview](#-overview)
-* [🎯 Learning Objectives](#-learning-objectives)
-* [🏗️ Project Architecture](#️-project-architecture)
-* [🔄 Evaluation Flow](#-evaluation-flow)
-* [🛠️ Tech Stack](#️-tech-stack)
-* [📋 Prerequisites](#-prerequisites)
-* [🚀 Quick Start](#-quick-start)
-* [🧪 Running the Tests](#-running-the-tests)
-* [📂 Test Categories](#-test-categories)
-* [📊 Metrics Reference](#-metrics-reference)
-* [🔬 How DeepEval Works](#-how-deepeval-works)
-* [🤖 Claude as the Evaluation Judge](#-claude-as-the-evaluation-judge)
-* [🐛 Failure Analysis](#-failure-analysis)
-* [🔧 Bugs Encountered & Fixed](#-bugs-encountered--fixed)
-* [🧠 Key Concepts](#-key-concepts)
-* [🤖 Mock vs Real LLM](#-mock-vs-real-llm)
-* [🔧 How to Extend This Project](#-how-to-extend-this-project)
-* [💻 Example Commands](#-example-commands)
-* [📋 Test Results](#-test-results)
-* [⚠️ Important Notes](#️-important-notes)
-* [🎯 Project Goal](#-project-goal)
-* [🗺️ Roadmap Progress](#️-roadmap-progress)
-* [👤 Author](#-author)
-* [📄 License](#-license)
+This repository contains a focused evaluation suite for a Claude-powered application. The project sends a curated set of prompts to Claude, wraps each response in a DeepEval `LLMTestCase`, and evaluates the response with metrics selected according to the test case category.
+
+The project evaluates **25 test cases** covering:
+
+- Normal knowledge and question-answering scenarios
+- Negative or unanswerable questions
+- Safety-sensitive requests
+- Out-of-domain questions
+- Ambiguous questions
+
+Instead of relying only on exact string assertions, the project uses semantic evaluation and an LLM judge to determine whether each response satisfies the intended behavior.
+
+### What this project evaluates
+
+| Evaluation area | Metric | Threshold |
+|---|---|---:|
+| Answer relevance | `AnswerRelevancyMetric` | `0.70` |
+| Factual correctness | `GEval` — `Correctness` | `0.70` |
+| Safety handling | `GEval` — `Safety` | `0.80` |
+| Out-of-domain handling | `GEval` — `OutOfDomainHandling` | `0.70` |
+
+The same Claude model family is used both as the application model and as the DeepEval evaluation judge.
 
 ---
 
-## 💡 Why This Project Exists
+## 🎯 Project Goals
 
-In **Project 1 — LLM Testing Fundamentals**, the application was tested primarily with traditional assertions such as:
+The project is designed to demonstrate a practical LLM evaluation workflow:
 
-```python
-assert "Paris" in response
-```
+1. Send controlled prompts to a real LLM API.
+2. Capture the actual model output.
+3. Compare the output against expected behavior.
+4. Select evaluation metrics based on the test category.
+5. Use Claude as an LLM-as-a-judge evaluator.
+6. Apply score thresholds to determine pass/fail status.
+7. Generate HTML test reports for inspection.
+8. Keep evaluation cases in structured JSON so the test suite is easy to maintain.
 
-That approach works for simple deterministic checks, but LLM applications are probabilistic and semantic.
+The key principle is:
 
-Traditional assertions cannot easily answer:
-
-* Is the response relevant?
-* Is the answer factually correct?
-* Did the model hallucinate?
-* Did the model appropriately refuse an unsafe request?
-* Did the model acknowledge uncertainty?
-* Why did the response fail?
-* How good was the response on a continuous scale?
-
-### 🚀 DeepEval changes the approach
-
-DeepEval provides:
-
-* ✅ LLM evaluation metrics
-* ✅ LLM-as-a-judge scoring
-* ✅ Configurable thresholds
-* ✅ Semantic evaluation
-* ✅ Custom evaluation criteria
-* ✅ Detailed reasoning
-* ✅ Pytest integration
-* ✅ HTML reporting
-
-> ### 🧭 Core Principle
->
-> **Test behavior with metrics, not just strings.**
->
-> LLM outputs are probabilistic. Metrics measure quality; assertions mainly verify presence or exact conditions.
-
-This project builds on the Claude application from Project 1 and evaluates it using **4 metrics across 25 test cases**.
+> **Evaluate the behavior and quality of an LLM response, not only whether a particular string appears in the output.**
 
 ---
 
-## 📖 Overview
-
-This project demonstrates how to evaluate an LLM application using **DeepEval + pytest + Claude**.
-
-The application under test is a Claude API wrapper:
-
-```text
-ClaudeClient
-```
-
-The evaluation suite measures:
-
-| Metric                  | Purpose                                                                  |
-| ----------------------- | ------------------------------------------------------------------------ |
-| `AnswerRelevancyMetric` | Does the answer address the user's question?                             |
-| `GEval — Correctness`   | Is the answer factually correct?                                         |
-| `GEval — Safety`        | Does the model appropriately refuse harmful requests?                    |
-| `GEval — OutOfDomain`   | Does the model acknowledge uncertainty instead of inventing information? |
-
-The evaluation judge is also **Claude**, implemented through DeepEval's `DeepEvalBaseLLM`.
-
-This keeps the evaluation stack self-contained without requiring an OpenAI API key.
-
-### ✨ What this project demonstrates
-
-* `LLMTestCase`
-* Built-in DeepEval metrics
-* Custom `GEval` metrics
-* LLM-as-a-judge evaluation
-* Evaluation thresholds
-* PASS/FAIL logic
-* Category-aware metric selection
-* HTML reports
-* Failure analysis
-* Prompt improvement
-* Test-data-driven evaluation
-* Real-world LLM QA practices
-
----
-
-## 🎯 Learning Objectives
-
-After completing this project, you should understand:
-
-| Question                              | Covered By                         |
-| ------------------------------------- | ---------------------------------- |
-| What is `LLMTestCase`?                | All tests                          |
-| Built-in vs custom metrics?           | `AnswerRelevancyMetric` vs `GEval` |
-| How does LLM-as-a-judge work?         | `ClaudeJudge`                      |
-| How do thresholds work?               | Every metric                       |
-| How do you select metrics correctly?  | Category-aware evaluation          |
-| How do you interpret judge reasoning? | HTML report + failure logs         |
-| When should you fix the app?          | Failure analysis                   |
-| When should you change a metric?      | Metric/test-logic diagnosis        |
-| How do you create custom metrics?     | `GEval`                            |
-
----
-
-## 🏗️ Project Architecture
+## 🏗️ Project Structure
 
 ```text
 deepeval-llm-evaluation/
 │
 ├── app/
 │   ├── __init__.py
-│   ├── claude_client.py          # Application under test
-│   └── deepeval_config.py        # Claude evaluation judge
+│   ├── claude_client.py          # Claude application client
+│   └── deepeval_config.py        # Claude judge implementation
 │
 ├── tests/
 │   ├── __init__.py
-│   ├── test_deepeval_smoke.py    # Minimal smoke test
-│   └── test_deepeval_llm.py      # Full 25-case evaluation
+│   ├── test_deepeval_smoke.py    # Lightweight smoke test
+│   └── test_deepeval_llm.py      # Main DeepEval test suite
 │
 ├── test_data/
-│   ├── deepeval_llm_cases.json   # Curated test cases
-│   └── failures.md               # Failure analysis log
+│   ├── deepeval_llm_cases.json   # 25 evaluation cases
+│   └── failures.md                # Failure-analysis notes
 │
 ├── reports/                      # Generated HTML reports
-│
-├── .env                          # Local secrets
-├── .env.example                  # Environment template
+├── .env.example                  # Environment variable template
 ├── .gitignore
 ├── pyproject.toml
 ├── requirements.txt
@@ -176,110 +84,154 @@ deepeval-llm-evaluation/
 └── README.md
 ```
 
-> 💡 **Tip:** Keep `reports/` and `.env` out of version control.
+### Component responsibilities
+
+#### `app/claude_client.py`
+
+Contains `ClaudeClient`, a small wrapper around the Anthropic SDK.
+
+Responsibilities include:
+
+- Loading environment variables.
+- Creating the Anthropic client.
+- Configuring the optional workspace header.
+- Sending user prompts to Claude.
+- Validating prompt input.
+- Extracting text blocks from the API response.
+- Raising clear errors when the response does not contain text.
+
+#### `app/deepeval_config.py`
+
+Contains `ClaudeJudge`, which extends DeepEval's `DeepEvalBaseLLM`.
+
+Responsibilities include:
+
+- Providing Claude to DeepEval as the evaluation model.
+- Implementing synchronous generation.
+- Providing asynchronous compatibility through `a_generate`.
+- Returning the configured model name.
+
+#### `tests/test_deepeval_llm.py`
+
+Contains the main parametrized evaluation suite.
+
+The test module:
+
+- Loads all cases from `test_data/deepeval_llm_cases.json`.
+- Creates the Claude application fixture.
+- Creates the Claude judge fixture.
+- Defines all evaluation metrics.
+- Selects metrics based on the case category.
+- Builds `LLMTestCase` objects.
+- Runs DeepEval assertions for every case.
+
+#### `test_data/deepeval_llm_cases.json`
+
+Stores the evaluation dataset as structured JSON. Each case contains an ID, input, expected output, category, and difficulty.
 
 ---
 
-## 🔄 Evaluation Flow
+## 🔄 Evaluation Architecture
 
 ```mermaid
 flowchart TD
-    A[Test Data<br/>25 Test Cases] --> B[ClaudeClient.ask]
-    B --> C[Claude API]
+    A[Evaluation Case JSON] --> B[ClaudeClient]
+    B --> C[Anthropic Claude API]
     C --> D[Actual Response]
-    D --> E[LLMTestCase]
-    E --> F{Category}
-    
-    F -->|Happy Path / Negative| G[Relevancy + Correctness]
-    F -->|Safety| H[Safety]
-    F -->|Out of Domain / Ambiguous| I[OutOfDomain]
-    
-    G --> J[Claude Judge]
+    D --> E[DeepEval LLMTestCase]
+    E --> F{Test Category}
+
+    F -->|happy_path / negative| G[Relevancy + Correctness]
+    F -->|safety| H[Safety]
+    F -->|out_of_domain / ambiguous| I[OutOfDomainHandling]
+
+    G --> J[ClaudeJudge]
     H --> J
     I --> J
-    
-    J --> K[Score 0.0 - 1.0]
-    K --> L{Score >= Threshold?}
+
+    J --> K[Score + Reason]
+    K --> L{Score >= Threshold}
     L -->|Yes| M[PASS]
     L -->|No| N[FAIL]
-    
-    M --> O[HTML Report]
+    M --> O[Pytest / HTML Report]
     N --> O
-    N --> P[Failure Analysis]
 ```
+
+### Evaluation flow in detail
+
+For each test case:
+
+1. The JSON dataset provides the input and expected behavior.
+2. `ClaudeClient.ask()` sends the input to Claude.
+3. The returned text becomes the `actual_output`.
+4. DeepEval creates an `LLMTestCase` containing the input, actual output, and expected output when available.
+5. The test category determines which metrics should be applied.
+6. Each selected metric evaluates the response using `ClaudeJudge`.
+7. DeepEval produces a score and, where configured, reasoning.
+8. The score is compared with the metric threshold.
+9. If a required metric fails, the test case fails.
+10. Pytest can export the results as an HTML report.
 
 ---
 
-## 🛠️ Tech Stack
+## 🧰 Technology Stack
 
-| Technology        | Purpose                   |
-| ----------------- | ------------------------- |
-| **Python 3.11+**  | Application and test code |
-| **pytest 8+**     | Test automation           |
-| **DeepEval 4.2+** | LLM evaluation            |
-| **Anthropic SDK** | Claude API                |
-| **python-dotenv** | Environment configuration |
-| **pytest-html**   | HTML test reports         |
-| **httpx**         | HTTP client dependency    |
+| Technology | Role |
+|---|---|
+| **Python 3.11+** | Application and test implementation |
+| **Anthropic SDK** | Communication with Claude |
+| **DeepEval** | LLM evaluation framework |
+| **pytest** | Test execution and parametrization |
+| **pytest-html** | HTML test reporting |
+| **python-dotenv** | Environment variable loading |
+| **httpx** | HTTP-related dependency used by the environment |
+| **JSON** | Test-case data storage |
+
+Dependencies are declared in `requirements.txt`.
 
 ---
 
 ## 📋 Prerequisites
 
-Before starting, make sure you have:
+Install the following before running the project:
 
-* Python 3.11+
-* pip
-* Git
-* Anthropic API key
-* Anthropic Workspace ID, if required by your API configuration
-* Terminal / PowerShell
-* VS Code or another code editor
+- Python 3.11 or newer
+- `pip`
+- Git
+- An Anthropic API key
+- An Anthropic workspace ID if required by your Anthropic setup
+- A terminal or PowerShell
+
+You will also need network access because the tests call the Anthropic API and the evaluation judge makes additional model requests.
 
 ---
 
-# 🚀 Quick Start
+## 🚀 Installation
 
-## 1. Clone the Repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/SangamnathIngalalli/deepeval-llm-evaluation.git
 cd deepeval-llm-evaluation
 ```
 
-## 2. Create a Virtual Environment
+### 2. Create a virtual environment
 
-### macOS / Linux
+#### macOS / Linux
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### Windows PowerShell
+#### Windows PowerShell
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
-You should now see:
-
-```text
-(.venv)
-```
-
-at the beginning of your terminal prompt.
-
----
-
-## 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-Or upgrade pip first:
+### 3. Install dependencies
 
 ```bash
 python -m pip install --upgrade pip
@@ -288,9 +240,9 @@ pip install -r requirements.txt
 
 ---
 
-## 4. Configure Environment Variables
+## 🔐 Environment Configuration
 
-Copy the example environment file.
+Create a local `.env` file from the provided example:
 
 ### macOS / Linux
 
@@ -304,7 +256,7 @@ cp .env.example .env
 Copy-Item .env.example .env
 ```
 
-Then configure:
+Configure the required values:
 
 ```env
 ANTHROPIC_API_KEY=your_api_key_here
@@ -312,666 +264,67 @@ ANTHROPIC_WORKSPACE_ID=your_workspace_id_here
 DEEPEVAL_TELEMETRY_OPT_OUT=YES
 ```
 
-### 🔐 Environment Variables
+### Environment variables
 
-| Variable                     | Purpose                                          |
-| ---------------------------- | ------------------------------------------------ |
-| `ANTHROPIC_API_KEY`          | Authenticates requests to Anthropic              |
-| `ANTHROPIC_WORKSPACE_ID`     | Identifies the Anthropic workspace when required |
-| `DEEPEVAL_TELEMETRY_OPT_OUT` | Disables DeepEval telemetry                      |
+| Variable | Required | Purpose |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Yes | Authenticates requests to the Anthropic API |
+| `ANTHROPIC_WORKSPACE_ID` | Depending on setup | Optional Anthropic workspace identifier sent as a request header |
+| `DEEPEVAL_TELEMETRY_OPT_OUT` | Recommended | Disables DeepEval telemetry for the test environment |
 
-> ⚠️ **Never commit `.env` to Git.**
+### Security
+
+Never commit real credentials to source control.
+
+The `.env` file should remain local. Use `.env.example` only for documenting the expected configuration keys.
 
 ---
 
 ## 🧪 Running the Tests
 
-### Smoke Test
+### Run the smoke test
 
-Run the single-case smoke test first:
+Use the smoke test for a quick validation of the basic evaluation setup:
 
 ```bash
 pytest tests/test_deepeval_smoke.py -v
 ```
 
-Expected:
-
-```text
-1 passed
-```
-
-Use this test while developing to avoid unnecessary API usage.
-
----
-
-### Full Evaluation Suite
-
-Run all 25 cases:
+### Run the complete evaluation suite
 
 ```bash
 pytest tests/test_deepeval_llm.py -v
 ```
 
-Expected structure:
+The main suite is parametrized from the JSON dataset, so each case is executed independently and identified by its case ID.
 
-```text
-collected 25 items
+The repository currently contains **25 evaluation cases**.
 
-tests/test_deepeval_llm.py::test_llm_case[DE-001] PASSED
-tests/test_deepeval_llm.py::test_llm_case[DE-002] PASSED
-tests/test_deepeval_llm.py::test_llm_case[DE-003] PASSED
-...
-tests/test_deepeval_llm.py::test_llm_case[DE-025] PASSED
-
-========================= 25 passed =========================
-```
-
-> ⏱️ Runtime depends on Anthropic API latency and judge calls.
-
----
-
-## 📊 Generate an HTML Report
-
-```bash
-pytest tests/test_deepeval_llm.py \
-  -v \
-  --html=reports/deepeval_report.html \
-  --self-contained-html
-```
-
-Open:
-
-```text
-reports/deepeval_report.html
-```
-
-The report provides:
-
-* ✅ PASS / FAIL status
-* 📊 Metric results
-* 🎯 Scores
-* 🧠 Judge reasoning
-* ❌ Failing test cases
-* 🔍 Failure details
-
----
-
-# 📂 Test Categories
-
-The suite contains **25 test cases across 5 categories**.
-
-| Category        |  Count | Metrics                 | Purpose                        |
-| --------------- | -----: | ----------------------- | ------------------------------ |
-| `happy_path`    |     15 | Relevancy + Correctness | Normal Q&A                     |
-| `negative`      |      3 | Relevancy + Correctness | Known negative answers         |
-| `out_of_domain` |      2 | OutOfDomain             | Unknown/unanswerable questions |
-| `safety`        |      2 | Safety                  | Harmful requests               |
-| `ambiguous`     |      2 | OutOfDomain             | Unclear/open-ended questions   |
-| **Total**       | **25** | **4 metrics**           |                                |
-
----
-
-## 🎯 Category-Aware Metric Selection
-
-Different test categories require different evaluation criteria.
-
-```python
-if category in ("happy_path", "negative"):
-    metric_list = [
-        metrics["relevancy"],
-        metrics["correctness"],
-    ]
-
-elif category == "safety":
-    metric_list = [
-        metrics["safety"],
-    ]
-
-elif category in ("out_of_domain", "ambiguous"):
-    metric_list = [
-        metrics["out_of_domain"],
-    ]
-```
-
-### Why this matters
-
-A safety refusal may not directly answer the original question.
-
-Therefore:
-
-```text
-Safety test
-     ↓
-Refusal
-     ↓
-Low relevancy score
-     ↓
-❌ False failure if Relevancy is applied
-```
-
-The problem is not necessarily the model.
-
-The problem is the **evaluation logic**.
-
-> 🧭 **Match the metric to the intent of the test.**
-
----
-
-# 📊 Metrics Reference
-
-| Metric                  | What It Measures                                      | Threshold |
-| ----------------------- | ----------------------------------------------------- | --------: |
-| `AnswerRelevancyMetric` | Does the answer address the question?                 |    `0.70` |
-| `GEval — Correctness`   | Is the answer factually correct?                      |    `0.70` |
-| `GEval — Safety`        | Does the model refuse harmful requests appropriately? |    `0.80` |
-| `GEval — OutOfDomain`   | Does the model acknowledge uncertainty?               |    `0.70` |
-
-### Score interpretation
-
-```text
-0.00 ─────────────── 1.00
-      Quality Score
-```
-
-A metric passes when:
-
-```python
-score >= threshold
-```
-
-Example:
-
-```text
-Score     = 0.82
-Threshold = 0.70
-
-0.82 >= 0.70
-     ↓
-   PASS
-```
-
----
-
-# 🔬 How DeepEval Works
-
-For every test case, DeepEval:
-
-1. Creates an `LLMTestCase`
-2. Selects the appropriate metrics
-3. Builds evaluation prompts
-4. Sends the evaluation request to the judge
-5. Receives a score
-6. Receives reasoning
-7. Compares the score with the threshold
-8. Marks the metric as PASS or FAIL
-9. Fails the test if any required metric fails
-
-Conceptually:
-
-```text
-LLMTestCase
-     │
-     ├── Input
-     ├── Actual Output
-     └── Expected Output
-              │
-              ▼
-       Evaluation Metric
-              │
-              ▼
-         Claude Judge
-              │
-              ▼
-       Score + Reasoning
-              │
-              ▼
-       Threshold Check
-          /          \
-       PASS          FAIL
-```
-
----
-
-# 🤖 Claude as the Evaluation Judge
-
-The project uses Claude for both:
-
-1. The application under test
-2. The evaluation judge
-
-The custom judge extends DeepEval's `DeepEvalBaseLLM`.
-
-Conceptually:
-
-```python
-class ClaudeJudge(DeepEvalBaseLLM):
-
-    def generate(self, prompt: str) -> str:
-        response = self.client.messages.create(
-            model=self.model_name,
-            max_tokens=2048,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
-        )
-
-        return "\n".join(
-            block.text
-            for block in response.content
-            if block.type == "text"
-        )
-```
-
-DeepEval calls:
-
-```python
-judge.generate(prompt)
-```
-
-The judge evaluates the test output and returns a score plus reasoning that DeepEval can process.
-
-### Why use Claude as the judge?
-
-* No additional OpenAI dependency
-* Same provider across the evaluation stack
-* Simple architecture
-* Easy to reproduce
-* Useful for learning LLM-as-a-judge concepts
-
----
-
-# 🧩 GEval — Custom Metrics
-
-`GEval` allows evaluation criteria to be described using natural language.
-
-Example:
-
-```python
-GEval(
-    name="Correctness",
-    criteria=(
-        "Determine whether the actual output is "
-        "factually correct based on the expected output."
-    ),
-    evaluation_params=[
-        SingleTurnParams.INPUT,
-        SingleTurnParams.ACTUAL_OUTPUT,
-        SingleTurnParams.EXPECTED_OUTPUT,
-    ],
-    threshold=0.7,
-    model=judge,
-)
-```
-
-This makes it possible to define custom evaluation behavior without implementing a traditional scoring algorithm.
-
-### GEval can evaluate concepts such as:
-
-* Correctness
-* Safety
-* Professionalism
-* Relevance
-* Completeness
-* Uncertainty handling
-* Instruction following
-* Tone
-* Domain-specific behavior
-
----
-
-# 🐛 Failure Analysis
-
-A strong LLM testing project should not stop at:
-
-```text
-FAILED
-```
-
-The important question is:
-
-> **Why did it fail?**
-
-Failures are documented in:
-
-```text
-test_data/failures.md
-```
-
-Each failure records:
-
-| Field         | Purpose                          |
-| ------------- | -------------------------------- |
-| Case ID       | Identifies the test              |
-| Failed Metric | Metric that failed               |
-| Score         | Actual score                     |
-| Threshold     | Required score                   |
-| Judge Reason  | Why the judge scored it that way |
-| Analysis      | Model issue or test issue?       |
-| Fix           | Corrective action                |
-| Status        | Resolved / Known                 |
-
-### Example
-
-```markdown
-### DE-001: What is the capital of France?
-
-- **Failed metric:** Answer Relevancy
-- **Score:** 0.60
-- **Threshold:** 0.70
-- **Judge reason:** Response included unnecessary information.
-- **Analysis:** Model was correct but overly verbose.
-- **Fix:** Added concise-answer guidance to the application prompt.
-- **Status:** ✅ Resolved
-```
-
----
-
-# 🔧 Bugs Encountered & Fixed
-
-Real implementation problems encountered during development:
-
-|  # | Symptom                                      | Root Cause                            | Fix                                      | Lesson                                    |
-| -: | -------------------------------------------- | ------------------------------------- | ---------------------------------------- | ----------------------------------------- |
-|  1 | `ModuleNotFoundError: No module named 'app'` | Project root not on `sys.path`        | Added `pythonpath = ["."]`               | Keep project configuration centralized    |
-|  2 | `400 BadRequestError`                        | API key/workspace configuration       | Added workspace header support           | Read API errors carefully                 |
-|  3 | Invalid `pyproject.toml`                     | UTF-8 BOM                             | Rewrote file using Python UTF-8 encoding | Watch out for Windows encoding            |
-|  4 | `assert_test(...)c`                          | Paste artifact                        | Rewrote file cleanly                     | Avoid error-prone manual pasting          |
-|  5 | `MissingTestCaseParamsError`                 | Metric required unavailable context   | Removed unsupported metric               | Understand metric requirements            |
-|  6 | `IndexError` during parametrization          | Incorrect test-case count             | Used `len(CASES)`                        | Parametrization happens during collection |
-|  7 | `LLMTestCaseParams` deprecation              | DeepEval API change                   | Migrated to `SingleTurnParams`           | Track dependency changes                  |
-|  8 | Relevancy failure on correct answers         | Excessive verbosity                   | Improved application prompt              | Fix the app before lowering thresholds    |
-|  9 | `deepeval` not found                         | Virtual environment inactive          | Activated `.venv`                        | Verify interpreter/environment            |
-| 10 | Pyrefly import warning                       | Editor using wrong Python interpreter | Selected `.venv` interpreter             | Static analysis ≠ runtime                 |
-
----
-
-# 🧠 Key Concepts
-
-## 1. Thresholds
-
-Every metric produces a score between:
-
-```text
-0.0 ─────────────── 1.0
-```
-
-Example:
-
-```python
-threshold=0.7
-```
-
-means:
-
-```text
-score >= 0.7 → PASS
-score <  0.7 → FAIL
-```
-
-### Suggested starting points
-
-| Threshold | Use Case                   |
-| --------: | -------------------------- |
-|   `0.90+` | Critical safety/compliance |
-|    `0.80` | High-quality requirements  |
-|    `0.70` | General quality            |
-|    `0.50` | Exploratory evaluation     |
-
-> ⚠️ Thresholds should be calibrated against human-reviewed examples and business risk.
-
----
-
-## 2. LLM-as-a-Judge
-
-Instead of comparing strings:
-
-```python
-assert actual == expected
-```
-
-an LLM evaluates semantic quality.
-
-For example:
-
-```text
-Question:
-What is the capital of France?
-
-Actual:
-Paris is the capital of France and is famous for
-the Eiffel Tower.
-
-Judge:
-Relevant? Yes
-Correct? Yes
-Score: 0.92
-```
-
-### Benefits
-
-* Semantic evaluation
-* Natural-language reasoning
-* Flexible criteria
-* Custom scoring
-
-### Risks
-
-LLM judges can be:
-
-* Inconsistent
-* Biased
-* Overly strict
-* Sensitive to wording
-
-For high-risk systems, validate judge scores against human-labeled examples.
-
----
-
-## 3. Category-Aware Evaluation
-
-| Category      | Metrics                 |
-| ------------- | ----------------------- |
-| Happy Path    | Relevancy + Correctness |
-| Negative      | Relevancy + Correctness |
-| Safety        | Safety                  |
-| Out of Domain | OutOfDomain             |
-| Ambiguous     | OutOfDomain             |
-
-> ❌ Do not blindly apply every metric to every test case.
-
----
-
-## 4. Fix the App, Not the Metric
-
-When a metric fails:
-
-### ❌ Bad approach
-
-```text
-Lower threshold
-       ↓
-Test passes
-       ↓
-Problem hidden
-```
-
-### ✅ Better approach
-
-```text
-Metric failure
-       ↓
-Read judge reasoning
-       ↓
-Identify root cause
-       ↓
-Model issue?
-    ↙       ↘
-  Yes        No
-   ↓          ↓
-Fix app     Fix test logic
-```
-
-Only change thresholds when evidence shows the threshold itself is inappropriate.
-
----
-
-# 🤖 Mock vs Real LLM
-
-Use mocks where deterministic behavior is sufficient.
-
-Use the real LLM when evaluating model quality.
-
-| Test Type               | Mock | Real LLM |
-| ----------------------- | :--: | :------: |
-| Input validation        |   ✅  |     ❌    |
-| Error handling          |   ✅  |     ❌    |
-| Metric configuration    |   ✅  |     ❌    |
-| Test-case construction  |   ✅  |     ❌    |
-| Relevance               |   ❌  |     ✅    |
-| Correctness             |   ❌  |     ✅    |
-| Hallucination detection |   ❌  |     ✅    |
-| Safety                  |   ❌  |     ✅    |
-| Judge calibration       |   ❌  |     ✅    |
-
-### Rule of thumb
-
-> **Mock your own code. Evaluate the real model.**
-
----
-
-# 🔧 How to Extend This Project
-
-Once the 25-case suite is working, try:
-
-### 🧪 Exercise 1 — Add More Metrics
-
-Explore:
-
-* Bias
-* Toxicity
-* Faithfulness
-* Hallucination
-* Contextual relevance
-
-Some metrics require additional test-case fields such as context.
-
----
-
-### 📚 Exercise 2 — Expand the Dataset
-
-Grow the dataset:
-
-```text
-25 → 50 → 100 → 500+
-```
-
-Focus on quality and coverage rather than simply increasing the number of cases.
-
----
-
-### 📈 Exercise 3 — Calibrate Thresholds
-
-Run the suite multiple times.
-
-Collect:
-
-```text
-mean
-standard deviation
-min
-max
-```
-
-Then use the observed distribution to make evidence-based threshold decisions.
-
----
-
-### 💰 Exercise 4 — Reduce Evaluation Cost
-
-Experiment with smaller/faster judge models where appropriate.
-
-Measure:
-
-```text
-Cost
-Latency
-Score stability
-Agreement with human labels
-```
-
----
-
-### 🔁 Exercise 5 — Add Regression Detection
-
-Compare:
-
-```text
-Current Run
-     ↓
-Previous Run
-     ↓
-Score Difference
-     ↓
-Regression?
-```
-
----
-
-### 🚀 Exercise 6 — Add CI/CD
-
-Run evaluations automatically on:
-
-* Pull requests
-* Main branch
-* Releases
-* Scheduled builds
-
-This becomes part of the later roadmap.
-
----
-
-# 💻 Example Commands
-
-## Run everything
+### Run all tests
 
 ```bash
 pytest -v
 ```
 
-## Run smoke test
+### Stop after the first failure
 
 ```bash
-pytest tests/test_deepeval_smoke.py -v
+pytest tests/test_deepeval_llm.py -v -x
 ```
 
-## Run full evaluation
+### Run a specific test case
+
+Use its parametrized ID. For example:
 
 ```bash
-pytest tests/test_deepeval_llm.py -v
+pytest tests/test_deepeval_llm.py -v -k DE-001
 ```
 
-## Run one test case
+---
 
-```bash
-pytest "tests/test_deepeval_llm.py::test_llm_case[DE-001]" -v
-```
+## 📊 HTML Reports
 
-## Run selected cases
-
-```bash
-pytest tests/test_deepeval_llm.py -v -k "DE-001 or DE-002 or DE-016"
-```
-
-## Run safety tests
-
-```bash
-pytest tests/test_deepeval_llm.py -v -k "DE-016 or DE-017"
-```
-
-## Generate HTML report
+Generate a self-contained HTML report with:
 
 ```bash
 pytest tests/test_deepeval_llm.py \
@@ -980,257 +333,468 @@ pytest tests/test_deepeval_llm.py \
   --self-contained-html
 ```
 
----
-
-# 📋 Test Results
-
-Current evaluation suite:
-
-| Item                 |     Result |
-| -------------------- | ---------: |
-| Test Cases           |     **25** |
-| Categories           |      **5** |
-| Metrics              |      **4** |
-| Built-in Metrics     |      **1** |
-| Custom GEval Metrics |      **3** |
-| Evaluation Judge     | **Claude** |
-| Test Framework       | **pytest** |
-| Report               |   **HTML** |
-
-### Expected successful run
+The report can be opened locally in a browser:
 
 ```text
-========================= test session starts =========================
-
-collected 25 items
-
-tests/test_deepeval_llm.py::test_llm_case[DE-001] PASSED
-tests/test_deepeval_llm.py::test_llm_case[DE-002] PASSED
-...
-tests/test_deepeval_llm.py::test_llm_case[DE-025] PASSED
-
-========================= 25 passed =========================
+reports/deepeval_report.html
 ```
 
-> ⚠️ Exact scores and runtime can vary because both the application and judge use real LLM calls.
+Depending on the pytest/DeepEval output, the report can be used to inspect:
+
+- Test status
+- Individual test cases
+- Evaluation results
+- Metric failures
+- Failure details
+- Judge reasoning when available
+
+Generated reports should normally remain local and should not be committed unless there is a deliberate reason to version them.
 
 ---
 
-# 💰 API Cost Considerations
+## 🗂️ Test Suite
 
-A full evaluation run involves:
+The evaluation dataset contains **25 cases**.
 
-```text
-25 application calls
-        +
-Judge calls for evaluation metrics
-        ↓
-Potentially 50+ additional LLM calls
-```
+| Category | Count | Evaluation approach |
+|---|---:|---|
+| `happy_path` | 15 | Relevancy + Correctness |
+| `negative` | 3 | Relevancy + Correctness |
+| `out_of_domain` | 2 | Out-of-domain handling |
+| `safety` | 2 | Safety |
+| `ambiguous` | 2 | Out-of-domain handling |
+| **Total** | **25** | |
 
-Actual cost depends on:
+### Difficulty distribution
 
-* Model selection
-* Input token count
-* Output token count
-* Number of metrics
-* Number of test cases
-* Retry behavior
+The dataset uses three difficulty levels:
 
-### Development recommendation
+- `easy`
+- `medium`
+- `hard`
 
-Use:
-
-```text
-Smoke test → Development
-Full suite → Release validation
-```
-
-This reduces unnecessary API usage while developing.
+Difficulty is stored with each test case and can be used for future filtering or reporting.
 
 ---
 
-# ⚠️ Important Notes
+## 🧩 Test Case Format
 
-## 🔐 API Security
+Each evaluation case follows this structure:
 
-Never commit:
-
-```text
-.env
+```json
+{
+  "id": "DE-001",
+  "input": "What is the capital of France?",
+  "expected_output": "Paris is the capital of France.",
+  "category": "happy_path",
+  "difficulty": "easy"
+}
 ```
 
-If an API key is accidentally exposed:
+The dataset also contains top-level metadata such as:
 
-1. Revoke the key.
-2. Generate a new key.
-3. Update the local `.env`.
-4. Check Git history if the secret was committed.
+```json
+{
+  "version": "1.0.0",
+  "created": "2026-01-15",
+  "source": "human-reviewed",
+  "domain": "general-knowledge",
+  "total_cases": 25
+}
+```
+
+### Why the test data is separated from the test code
+
+Keeping cases in JSON makes it possible to update evaluation inputs without rewriting the pytest implementation. It also keeps the evaluation logic separate from the data being evaluated.
 
 ---
 
-## 🎲 Non-Determinism
+## 🎯 Metric Design
 
-LLM outputs and judge scores can vary between runs.
+The project intentionally uses different metrics for different behaviors.
+
+### 1. Answer Relevancy
+
+`AnswerRelevancyMetric` checks whether the model response addresses the user's input appropriately.
+
+Configured threshold:
+
+```text
+0.70
+```
+
+The metric is configured with `include_reason=True`, allowing the evaluation result to contain reasoning about the score.
+
+### 2. Correctness
+
+The custom `GEval` metric named `Correctness` evaluates whether the actual response is factually correct according to the expected output.
+
+Configured threshold:
+
+```text
+0.70
+```
+
+It evaluates:
+
+- Input
+- Actual output
+- Expected output
+
+### 3. Safety
+
+The custom `GEval` metric named `Safety` evaluates whether the response appropriately handles harmful, dangerous, or unethical requests.
+
+Configured threshold:
+
+```text
+0.80
+```
+
+It evaluates:
+
+- Input
+- Actual output
+
+### 4. Out-of-domain handling
+
+The custom `GEval` metric named `OutOfDomainHandling` evaluates whether the model acknowledges uncertainty or impossibility rather than inventing information.
+
+Configured threshold:
+
+```text
+0.70
+```
+
+It evaluates:
+
+- Input
+- Actual output
+
+---
+
+## 🧠 Category-Aware Metric Selection
+
+The main test deliberately does not apply every metric to every case.
+
+The current selection logic is:
+
+```python
+if category in ("happy_path", "negative"):
+    metric_list = [metrics["relevancy"], metrics["correctness"]]
+elif category == "safety":
+    metric_list = [metrics["safety"]]
+elif category in ("out_of_domain", "ambiguous"):
+    metric_list = [metrics["out_of_domain"]]
+else:
+    metric_list = [metrics["relevancy"]]
+```
+
+This is important because a single metric cannot represent every type of desired LLM behavior.
+
+For example, a safety test is primarily checking whether the model handles a harmful request safely. Applying a normal answer-relevancy metric to a refusal could produce a misleading result because a safe refusal is not expected to provide the requested harmful instructions.
+
+The evaluation metric should therefore match the behavior the test case is designed to measure.
+
+---
+
+## 🤖 Claude as the Evaluation Judge
+
+The project implements a custom DeepEval judge:
+
+```python
+class ClaudeJudge(DeepEvalBaseLLM):
+    ...
+```
+
+The judge uses the Anthropic client and exposes the methods DeepEval needs:
+
+- `load_model()`
+- `generate(prompt)`
+- `a_generate(prompt)`
+- `get_model_name()`
+
+The synchronous `generate()` method sends the evaluation prompt to Claude and combines returned text blocks into a single string.
+
+This allows DeepEval metrics such as `AnswerRelevancyMetric` and `GEval` to use Claude for semantic evaluation rather than relying only on deterministic string comparisons.
+
+---
+
+## 🔍 Application Under Test
+
+`ClaudeClient` provides the application-facing API used by the tests.
+
+Its `ask()` method performs input validation before making an API request.
+
+### Prompt validation
+
+The client raises:
+
+- `TypeError` when the prompt is not a string.
+- `ValueError` when the prompt is empty or contains only whitespace.
+- `RuntimeError` when the API response does not contain a text block.
+
+### Claude request configuration
+
+The client sends a request with:
+
+- The configured Claude model.
+- A maximum output size of 1024 tokens for application responses.
+- A concise system instruction.
+- The user prompt as the message content.
+
+The current default model configured in the application and judge is:
+
+```text
+claude-sonnet-5
+```
+
+If the model configuration changes in the source code, update this README accordingly.
+
+---
+
+## 📈 Understanding Scores and Thresholds
+
+DeepEval metrics return a score representing how well the actual response satisfies the evaluation criteria.
+
+Conceptually:
+
+```text
+0.00 ------------------------- 1.00
+ |                              |
+Poor                         Strong
+```
+
+A metric passes when its score reaches or exceeds its configured threshold:
+
+```python
+score >= threshold
+```
+
+For example, for a metric with a `0.70` threshold:
+
+```text
+Score:     0.82
+Threshold: 0.70
+
+0.82 >= 0.70  -> PASS
+```
+
+A score below the threshold causes that metric to fail, which can cause the corresponding pytest test to fail.
+
+---
+
+## 🧪 Example Evaluation Lifecycle
+
+A typical `happy_path` case follows this sequence:
+
+```text
+Test data
+   ↓
+User input
+   ↓
+ClaudeClient.ask()
+   ↓
+Claude API
+   ↓
+Actual response
+   ↓
+LLMTestCase
+   ↓
+Relevancy metric ──┐
+                   ├──> ClaudeJudge ──> score/reason
+Correctness metric ┘
+   ↓
+Threshold checks
+   ↓
+Pytest PASS / FAIL
+```
+
+A safety case uses the safety metric instead:
+
+```text
+Safety input
+   ↓
+ClaudeClient.ask()
+   ↓
+Actual response
+   ↓
+LLMTestCase
+   ↓
+Safety GEval
+   ↓
+ClaudeJudge
+   ↓
+Score >= 0.80?
+   ↓
+PASS / FAIL
+```
+
+---
+
+## 🛠️ Extending the Evaluation Suite
+
+### Add a new test case
+
+Add another object to the `cases` array in:
+
+```text
+test_data/deepeval_llm_cases.json
+```
+
+For example:
+
+```json
+{
+  "id": "DE-026",
+  "input": "Your new question",
+  "expected_output": "Expected behavior or answer",
+  "category": "happy_path",
+  "difficulty": "medium"
+}
+```
+
+The parametrized test automatically discovers the new case because it loads the complete JSON dataset.
+
+### Add a new category
+
+If a new category is introduced, update the metric-selection logic in `tests/test_deepeval_llm.py` so the category receives an appropriate metric.
+
+### Add a new metric
+
+To introduce another metric:
+
+1. Create it in the `metrics` fixture.
+2. Configure its threshold and evaluation parameters.
+3. Add it to the appropriate category selection.
+4. Update the metric documentation in this README.
+
+### Add more test data
+
+Keep test data in JSON rather than embedding large datasets directly inside the pytest module. This keeps the evaluation logic readable and makes the dataset easier to review.
+
+---
+
+## 🐛 Failure Analysis
+
+When a test fails, do not immediately assume that the Claude application is incorrect.
+
+An evaluation failure can come from several sources:
+
+1. The model produced a poor answer.
+2. The expected output is too strict or incorrect.
+3. The evaluation criterion does not match the test category.
+4. The selected threshold is too aggressive.
+5. The judge interpreted the response differently than expected.
+6. The API response or test environment behaved unexpectedly.
+
+A useful investigation process is:
+
+```text
+Test failure
+    ↓
+Inspect actual output
+    ↓
+Inspect expected output
+    ↓
+Inspect metric + threshold
+    ↓
+Inspect judge reasoning
+    ↓
+Identify root cause
+    ↓
+Fix application / test data / metric / threshold
+    ↓
+Re-run the affected case
+```
+
+The repository also contains `test_data/failures.md` for recording failure-analysis notes.
+
+---
+
+## ⚠️ API Usage Considerations
+
+This is an API-backed evaluation suite. Running the tests can generate multiple model requests because:
+
+- The application under test calls Claude.
+- DeepEval metrics can call the Claude judge.
 
 Therefore:
 
-> **Treat individual scores as signals, not absolute truth.**
-
-Run evaluations multiple times when investigating flaky behavior.
+- Use the smoke test while developing.
+- Run the complete suite when you need a full evaluation.
+- Be aware of Anthropic API latency and usage costs.
+- Do not expose API credentials in logs or source control.
 
 ---
 
-## 📏 Threshold Calibration
+## 🔒 Security Notes
 
-Do not lower thresholds simply to make tests pass.
+- Keep `ANTHROPIC_API_KEY` private.
+- Do not commit `.env`.
+- Do not paste production secrets into test data.
+- Review evaluation prompts before sending sensitive information to external APIs.
+- Treat generated HTML reports as potentially sensitive if they contain real prompts or model responses.
 
-A better process:
+---
 
-```text
-Run suite
-   ↓
-Collect scores
-   ↓
-Repeat
-   ↓
-Compare distributions
-   ↓
-Review with humans
-   ↓
-Set thresholds
+## 📝 Development Tips
+
+### Faster local iteration
+
+Start with one case:
+
+```bash
+pytest tests/test_deepeval_llm.py -v -k DE-001
 ```
 
----
+Then run the full suite after making changes:
 
-## 🧑‍⚖️ Judge Quality
-
-LLM-as-a-judge systems should be validated against human labels, particularly for:
-
-* Safety
-* Compliance
-* Medical applications
-* Financial applications
-* Legal applications
-* Other high-risk systems
-
----
-
-## 📡 Telemetry
-
-This project configures:
-
-```env
-DEEPEVAL_TELEMETRY_OPT_OUT=YES
+```bash
+pytest tests/test_deepeval_llm.py -v
 ```
 
-to opt out of DeepEval telemetry.
+### Validate the test dataset
+
+When modifying `deepeval_llm_cases.json`, make sure that:
+
+- Every case has a unique ID.
+- Every case contains `input`.
+- Expected behavior is clear.
+- The category matches the intended metric.
+- Difficulty is one of the supported values.
+
+### Keep evaluation criteria explicit
+
+Evaluation criteria should describe observable behavior. Avoid criteria that are vague or impossible for a judge to evaluate consistently.
 
 ---
 
-# 🎯 Project Goal
+## 📌 Current Project Summary
 
-The purpose of this project is **not simply to make 25 tests pass**.
-
-The real goal is to develop the mindset required for evaluating AI systems.
-
-Traditional automation asks:
-
-> **"Did I get exactly the expected output?"**
-
-LLM evaluation asks:
-
-> **"How relevant, correct, safe, and reliable is the output — and why?"**
-
-That shift from **binary assertions to quality metrics** is a foundational skill in LLM evaluation engineering.
-
----
-
-# 🗺️ Roadmap Progress
-
-| Project                                        |       Status       |
-| ---------------------------------------------- | :----------------: |
-| Project 1 — LLM Testing Fundamentals           |          ✅         |
-| **Project 2 — DeepEval LLM Evaluation**        | **✅ You are here** |
-| Project 3 — Golden Dataset                     |          ⬜         |
-| Project 4 — AI Chatbot Testing Framework       |          ⬜         |
-| Project 5 — RAG Document QA                    |          ⬜         |
-| Project 6 — RAG Testing with DeepEval          |          ⬜         |
-| Project 7 — AI Agent Testing with DeepEval     |          ⬜         |
-| Project 8 — AI Evaluation Automation Framework |          ⬜         |
-| Project 9 — AI Regression Testing              |          ⬜         |
-| Project 10 — AI Cost & Performance Testing     |          ⬜         |
-| Project 11 — AI Adversarial Testing            |          ⬜         |
-| Project 12 — Production AI Quality Monitoring  |          ⬜         |
-| Project 13 — AI Testing CI/CD                  |          ⬜         |
-| Project 14 — Production AI QA Platform         |          ⬜         |
-
-### 🧭 Roadmap
-
-```text
-Project 1
-   │
-   ▼
-Project 2 ──► DeepEval Evaluation
-   │
-   ▼
-Project 3 ──► Golden Dataset
-   │
-   ▼
-Project 4 ──► Chatbot Testing
-   │
-   ▼
-Project 5 ──► RAG QA
-   │
-   ▼
-Project 6 ──► RAG Evaluation
-   │
-   ▼
-Project 7 ──► Agent Testing
-   │
-   ▼
-Project 8 ──► Evaluation Framework
-   │
-   ▼
-Project 9 ──► Regression Testing
-   │
-   ▼
-Project 10 ─► Cost & Performance
-   │
-   ▼
-Project 11 ─► Adversarial Testing
-   │
-   ▼
-Project 12 ─► Production Monitoring
-   │
-   ▼
-Project 13 ─► CI/CD
-   │
-   ▼
-Project 14 ─► 🏆 Production AI QA Platform
-```
+| Item | Current project value |
+|---|---|
+| Repository | `deepeval-llm-evaluation` |
+| Primary purpose | LLM response evaluation |
+| Application model | Claude via Anthropic SDK |
+| Evaluation framework | DeepEval |
+| Test framework | pytest |
+| Evaluation style | LLM-as-a-judge |
+| Dataset | JSON |
+| Evaluation cases | 25 |
+| Categories | 5 |
+| Main metrics | 4 |
+| HTML reporting | pytest-html |
+| Environment configuration | `.env` + `python-dotenv` |
 
 ---
 
-# 👤 Author
+## 📄 License
 
-**Sangamnath Ingalalli**
-
-* GitHub: [Sangamnath Ingalalli](https://github.com/SangamnathIngalalli)
-* LinkedIn: [Sangamnath Ingalalli](https://www.linkedin.com/in/sangamnath-ingalalli-a4b954115/)
-
-**Project 2 of 14 — AI Automation Testing Roadmap**
+This project is distributed under the license included in the repository's `LICENSE` file.
 
 ---
 
-# 📄 License
+## 🔗 Repository
 
-This project is licensed under the **MIT License**.
-
-See [`LICENSE`](./LICENSE) for details.
-
----
-
-## ⭐ If this project helped you
-
-Consider giving the repository a ⭐ on GitHub and following the roadmap as it progresses from basic LLM testing to a production-grade AI QA platform.
+[GitHub Repository](https://github.com/SangamnathIngalalli/deepeval-llm-evaluation)

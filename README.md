@@ -819,12 +819,3 @@ Evaluation criteria should describe observable behavior. Avoid criteria that are
 
 ---
 
-## 📄 License
-
-This project is distributed under the license included in the repository's `LICENSE` file.
-
----
-
-## 🔗 Repository
-
-[GitHub Repository](https://github.com/SangamnathIngalalli/deepeval-llm-evaluation)
